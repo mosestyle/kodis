@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addons>
+<addon id="plugin.program.mosestylebuild"
+       name="Mosestyle Build Installer"
+       version="1.0.1"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="service.mosestyle.config" version="1.0.0"/>
+  </requires>
+  <extension point="xbmc.python.script" library="default.py"/>
+  <extension point="xbmc.addon.metadata">
+    <summary>Install Mosestyle's Kodi build</summary>
+    <description>Restores the build package; the first-run service applies GUI preferences on next start.</description>
+    <platform>all</platform>
+    <news>
+      [1.0.1] Safer skin switch: wait for "Keep skin?" prompt to close before restart to prevent freeze.
+    </news>
+  </extension>
+</addon>
+
+<addon id="repository.mosestyle"
+       name="Mosestyle Repository"
+       version="1.0.0"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.addon" version="12.0.0"/>
+  </requires>
+  <extension point="xbmc.addon.repository" name="Mosestyle Repository">
+    <dir>
+      <info compressed="false">https://mosestyle.github.io/kodis/repo/addons.xml</info>
+      <checksum>https://mosestyle.github.io/kodis/repo/addons.xml.md5</checksum>
+      <datadir zip="true">https://mosestyle.github.io/kodis/zips/</datadir>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary>Mosestyle add-ons and build installer</summary>
+    <description>Repository for Mosestyle’s installer and first-run config service.</description>
+    <platform>all</platform>
+  </extension>
+</addon>
+
+<addon id="service.mosestyle.config"
+       name="Mosestyle First-Run Config"
+       version="1.0.2"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+
+  <!-- IMPORTANT: run as a background service at startup -->
+  <extension point="xbmc.service" library="service.py" start="startup" />
+
+  <extension point="xbmc.addon.metadata">
+    <summary>Applies Mosestyle GUI preferences on first start after install</summary>
+    <description>Runs once, applies settings via JSON-RPC, writes a log, then disables itself.</description>
+    <platform>all</platform>
+  </extension>
+</addon>
+</addons>
