@@ -1,21 +1,21 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <addon id="repository.mosestyle"
        name="Mosestyle Repository"
        version="1.0.0"
        provider-name="Mosestyle">
   <requires>
-    <import addon="xbmc.addon" version="17.0.0"/>
+    <import addon="xbmc.addon" version="12.0.0"/>
   </requires>
-  <extension point="xbmc.addon.repository" name="Mosestyle Repo">
+  <extension point="xbmc.addon.repository" name="Mosestyle Repository">
     <dir>
-      <info compressed="false">https://raw.githubusercontent.com/mosestyle/kodis/gh-pages/repo/zips/addons.xml</info>
-      <checksum>https://raw.githubusercontent.com/mosestyle/kodis/gh-pages/repo/zips/addons.xml.md5</checksum>
-      <datadir zip="true">https://raw.githubusercontent.com/mosestyle/kodis/gh-pages/repo/zips/</datadir>
+      <info compressed="false">https://mosestyle.github.io/kodis/repo/addons.xml</info>
+      <checksum>https://mosestyle.github.io/kodis/repo/addons.xml.md5</checksum>
+      <datadir zip="true">https://mosestyle.github.io/kodis/zips/</datadir>
     </dir>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary>Repository for Mosestyle Build Installer</summary>
-    <description>Provides the Mosestyle Build Installer add-on and updates.</description>
+    <summary>Mosestyle add-ons and build installer</summary>
+    <description>Repository for Mosestyle’s installer and first-run config service.</description>
     <platform>all</platform>
   </extension>
 </addon>

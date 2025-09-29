@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="plugin.program.mosestylebuild"
        name="Mosestyle Build Installer"
-       version="1.5.2"
+       version="1.0.1"
        provider-name="Mosestyle">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="service.mosestyle.config" version="1.0.0"/>
   </requires>
-  <extension point="xbmc.python.pluginsource" library="default.py" />
+  <extension point="xbmc.python.script" library="default.py"/>
   <extension point="xbmc.addon.metadata">
-    <summary>Installs the Mosestyle build ZIP</summary>
-    <description>Downloads and extracts your build ZIP, then prompts to restart Kodi.</description>
+    <summary>Install Mosestyle's Kodi build</summary>
+    <description>Restores the build package; the first-run service applies GUI preferences on next start.</description>
     <platform>all</platform>
+    <news>
+      [1.0.1] Safer skin switch: wait for "Keep skin?" prompt to close before restart to prevent freeze.
+    </news>
   </extension>
 </addon>

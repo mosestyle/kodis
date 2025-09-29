@@ -1,105 +1,122 @@
 #!/usr/bin/env python3
-# Build zips to repo/zips/, write addons.xml/md5 there, and copy the latest repo zip to the ROOT.
-import argparse, hashlib, os, re, sys, zipfile, shutil
-from pathlib import Path
+"""
+Mosestyle repo generator (verbose)
+- Zips each add-on under ./repo/<addon_id>/
+- Writes ./repo/addons.xml and ./repo/addons.xml.md5
+- Copies latest repository zip to repo root
+- Writes/updates index.html
+Run from the repo root:
+  py -3 _repo_generator.py   # Windows
+  python _repo_generator.py  # if python is 3.x
+"""
+
+import os, io, sys, zipfile, hashlib, shutil
 from xml.etree import ElementTree as ET
+from datetime import datetime, timezone
 
-SRC_DIR = Path("repo")
-OUT_DIR = Path("repo/zips")
-REPO_ID = "repository.mosestyle"
-ROOT    = Path(".")
+ROOT = os.path.abspath(os.path.dirname(__file__))
+REPO_SRC = os.path.join(ROOT, "repo")
+ZIPS_DIR = os.path.join(ROOT, "zips")
+IGNORE = {".git", ".github", "__pycache__", ".DS_Store", "Thumbs.db"}
 
-IGNORE = {".git","__pycache__",".DS_Store","Thumbs.db"}
-SEMVER = re.compile(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?")
+def say(m): print(f"[generator] {m}", flush=True)
+def read_text(p):  return io.open(p, "r", encoding="utf-8").read()
+def write_text(p,s):
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    io.open(p, "w", encoding="utf-8", newline="\n").write(s)
+def md5_hex(s):    return hashlib.md5(s.encode("utf-8")).hexdigest()
 
-def semver_key(s):
-    m = SEMVER.search(s) or ()
-    a = int(m.group(1)) if m and m.group(1) else -1
-    b = int(m.group(2)) if m and m.group(2) else -1
-    c = int(m.group(3)) if m and m.group(3) else -1
-    return (a,b,c,s)
+def ensure_layout():
+    say(f"cwd: {os.getcwd()}")
+    if not os.path.isdir(REPO_SRC):
+        say("ERROR: ./repo/ not found"); sys.exit(1)
+    entries = [e for e in os.listdir(REPO_SRC) if os.path.isdir(os.path.join(REPO_SRC, e))]
+    if not entries: say("ERROR: ./repo/ has no add-on folders"); sys.exit(1)
+    say(f"./repo/ contains: {', '.join(entries)}")
 
-def find_addons():
-    for d in sorted(SRC_DIR.iterdir()):
-        if d.name.lower()=="zips" or not d.is_dir(): continue
-        ax = d/"addon.xml"
-        if not ax.exists():
-            print(f"[warn] {d}/addon.xml missing; skipping", file=sys.stderr); continue
-        try:
-            x = ET.fromstring(ax.read_text(encoding="utf-8"))
-        except ET.ParseError as e:
-            print(f"[warn] {d}/addon.xml parse error: {e}; skipping", file=sys.stderr); continue
-        aid, ver = x.get("id"), x.get("version")
-        if not aid or not ver:
-            print(f"[warn] {d}: missing id/version; skipping", file=sys.stderr); continue
-        yield d, aid, ver
+def zip_addon(src_dir, addon_id, version):
+    out_dir = os.path.join(ZIPS_DIR, addon_id)
+    os.makedirs(out_dir, exist_ok=True)
+    out_zip = os.path.join(out_dir, f"{addon_id}-{version}.zip")
+    with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for root, dirs, files in os.walk(src_dir):
+            dirs[:] = [d for d in dirs if d not in IGNORE]
+            for name in files:
+                if name in IGNORE: continue
+                ap = os.path.join(root, name)
+                rp = os.path.relpath(ap, src_dir)
+                z.write(ap, arcname=os.path.join(addon_id, rp))
+    say(f"ZIPPED: {addon_id}-{version} -> {os.path.relpath(out_zip, ROOT)}")
+    return out_zip
 
-def zip_addon(src, aid, ver):
-    dst_dir = OUT_DIR/aid
-    dst_dir.mkdir(parents=True, exist_ok=True)
-    zp = dst_dir/f"{aid}-{ver}.zip"
-    with zipfile.ZipFile(zp, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for root, dirs, files in os.walk(src):
-            dirs[:] = [d for d in dirs if d not in IGNORE and (src/d).exists()]
-            for fn in files:
-                if fn in IGNORE: continue
-                f = Path(root)/fn
-                z.write(f, f.relative_to(src).as_posix())
-    print(f"[ok] {zp}")
-    return zp
+def collect_addons():
+    items = []
+    for entry in sorted(os.listdir(REPO_SRC)):
+        src = os.path.join(REPO_SRC, entry)
+        if not os.path.isdir(src) or entry in IGNORE: continue
+        ax = os.path.join(src, "addon.xml")
+        if not os.path.isfile(ax):
+            say(f"SKIP: {entry} (no addon.xml)"); continue
+        root = ET.parse(ax).getroot()
+        addon_id = root.attrib.get("id"); version = root.attrib.get("version")
+        if not addon_id or not version:
+            say(f"ERROR: {ax} missing id or version"); sys.exit(1)
+        items.append((addon_id, version, ax, src))
+    if not items:
+        say("ERROR: no valid add-ons found in ./repo/"); sys.exit(1)
+    return items
 
-def read_addon_xml_from_zip(zp):
-    with zipfile.ZipFile(zp,"r") as z:
-        for n in z.namelist():
-            if n.split("/")[-1].lower()=="addon.xml":
-                return z.read(n).decode("utf-8","replace")
-    raise FileNotFoundError(f"addon.xml not in {zp}")
+def build_addons_xml(paths):
+    parts = []
+    for p in paths:
+        t = read_text(p)
+        if t.lstrip().startswith("<?xml"): t = t[t.find("?>")+2:]
+        parts.append(t.strip())
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<addons>\n' + "\n\n".join(parts) + "\n</addons>\n"
 
-def build_addons_xml(zips):
-    parts=[]
-    for zp in zips:
-        parts.append(read_addon_xml_from_zip(zp).strip())
-    return "<addons>\n" + "\n\n".join(parts) + "\n</addons>\n"
-
-def md5(text):
-    import hashlib
-    m=hashlib.md5(); m.update(text.encode("utf-8")); return m.hexdigest()
-
-def latest_repo_zip():
-    folder = OUT_DIR/REPO_ID
-    if not folder.is_dir(): return None
-    zps = sorted(folder.glob(f"{REPO_ID}-*.zip"), key=lambda p: semver_key(p.name))
-    return zps[-1] if zps else None
+def write_index_html(latest_repo_zip):
+    html = f"""<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Mosestyle Kodi Repo</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.5">
+<h1 style="margin:0 0 8px">Mosestyle Kodi Repository</h1>
+<p>Install this zip in Kodi:</p>
+<p><a href="{latest_repo_zip}">{latest_repo_zip}</a></p>
+<hr><p><strong>Repo index:</strong> <a href="repo/addons.xml">addons.xml</a> · <a href="repo/addons.xml.md5">md5</a></p>
+<p><strong>ZIP folders:</strong></p><ul>""" + "".join(
+        f'<li><a href="zips/{d}/">{d}/</a></li>' for d in sorted(os.listdir(ZIPS_DIR))
+        if os.path.isdir(os.path.join(ZIPS_DIR, d))
+    ) + f"""</ul>
+<p><strong>Builds:</strong> <a href="builds/">builds/</a></p>
+<p style="color:#888">Updated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}</p>
+</body></html>"""
+    write_text(os.path.join(ROOT, "index.html"), html)
+    say("Wrote index.html")
 
 def main():
-    created=[]
-    for src, aid, ver in find_addons():
-        created.append(zip_addon(src, aid, ver))
-    if not created:
-        print("[err] No add-ons zipped. Aborting.", file=sys.stderr); sys.exit(1)
+    ensure_layout()
+    addons = collect_addons()
+    addon_xmls, repo_zips = [], []
+    for addon_id, version, addon_xml, src in addons:
+        out = zip_addon(src, addon_id, version)
+        addon_xmls.append(addon_xml)
+        if addon_id == "repository.mosestyle":
+            repo_zips.append((version, out))
 
-    xml = build_addons_xml(created)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    (OUT_DIR/"addons.xml").write_text(xml, encoding="utf-8")
-    (OUT_DIR/"addons.xml.md5").write_text(md5(xml), encoding="utf-8")
-    print(f"[ok] {OUT_DIR/'addons.xml'}")
-    print(f"[ok] {OUT_DIR/'addons.xml.md5'}")
+    merged = build_addons_xml(addon_xmls)
+    write_text(os.path.join(ROOT, "repo", "addons.xml"), merged)
+    write_text(os.path.join(ROOT, "repo", "addons.xml.md5"), md5_hex(merged))
+    say("WROTE: repo/addons.xml & repo/addons.xml.md5")
 
-    # Copy latest repository zip to ROOT for your old 'index.html' link
-    rz = latest_repo_zip()
-    if rz:
-        dst = ROOT/rz.name
-        shutil.copy2(rz, dst)
-        print(f"[ok] Copied {rz.name} to repo ROOT")
+    if repo_zips:
+        repo_zips.sort(key=lambda x: x[0])
+        ver, path = repo_zips[-1]
+        dest = f"repository.mosestyle-{ver}.zip"
+        shutil.copy2(path, os.path.join(ROOT, dest))
+        say(f"COPIED: {dest} to repo root")
+        write_index_html(dest)
 
-    # Minimal index.html like your old guide
-    (ROOT/"index.html").write_text(
-        f'<!DOCTYPE html>\n<a href="{(rz.name if rz else "repository.mosestyle-1.0.0.zip")}">'
-        f'{(rz.name if rz else "repository.mosestyle-1.0.0.zip")}</a>\n',
-        encoding="utf-8"
-    )
-    print("[ok] index.html")
-    print("Done.")
+    say("Done. Commit & push: /repo /zips repository.mosestyle-<ver>.zip index.html (and /builds if used)")
 
 if __name__ == "__main__":
     main()
