@@ -1,1 +1,0 @@
-https://mosestyle.github.io/kodis/
