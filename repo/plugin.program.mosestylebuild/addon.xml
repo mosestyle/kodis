@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.program.mosestylebuild"
+       name="Mosestyle Build Installer"
+       version="1.5.2"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py" />
+  <extension point="xbmc.addon.metadata">
+    <summary>Installs the Mosestyle build ZIP</summary>
+    <description>Downloads and extracts your build ZIP, then prompts to restart Kodi.</description>
+    <platform>all</platform>
+  </extension>
+</addon>

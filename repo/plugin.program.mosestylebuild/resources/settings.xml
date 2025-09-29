@@ -1,0 +1,6 @@
+<settings>
+  <category label="Build">
+    <setting id="build_url" type="text" label="Build ZIP URL"
+      default="https://raw.githubusercontent.com/mosestyle/kodis/gh-pages/builds/mosestyle-omega-1.0.0.zip" />
+  </category>
+</settings>

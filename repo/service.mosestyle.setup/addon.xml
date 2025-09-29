@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="service.mosestyle.setup"
+       name="Mosestyle First-Run Setup"
+       version="1.1.0"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.service" start="startup" library="service.py" />
+  <extension point="xbmc.addon.metadata">
+    <summary>Applies Mosestyle's GUI settings on first run</summary>
+    <description>Sets Player, Subtitles, Audio, Add-ons, Media, Regional, etc. Runs once, then disables itself.</description>
+    <platform>all</platform>
+  </extension>
+</addon>
