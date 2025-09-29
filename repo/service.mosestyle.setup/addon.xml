@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="service.mosestyle.config"
+       name="Mosestyle First-Run Config"
+       version="1.0.3"
+       provider-name="Mosestyle">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+
+  <!-- Run as a background service at startup -->
+  <extension point="xbmc.service" library="service.py" start="startup" />
+
+  <extension point="xbmc.addon.metadata">
+    <summary>Applies Mosestyle GUI preferences on first start after install</summary>
+    <description>Runs once, applies settings via JSON-RPC, writes a log, then disables itself.</description>
+    <platform>all</platform>
+    <news>
+      [1.0.3] Slightly longer wait for Home to settle before applying settings.
+    </news>
+  </extension>
+</addon>
